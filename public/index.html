@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Bharat City — Open World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Baloo 2', system-ui, sans-serif; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+  #loading { background: radial-gradient(circle at 50% 40%, #3a2412 0%, #120a05 70%); }
+  .logo { font-weight: 800; font-size: clamp(42px, 9vw, 96px); letter-spacing: 2px; line-height: 0.9; text-align: center;
+    background: linear-gradient(180deg, #ff9933 0%, #ffd27a 45%, #fff 50%, #9be59b 55%, #138808 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 0 rgba(0,0,0,.6)); }
+  .logo small { display: block; font-size: 0.28em; letter-spacing: 8px; color: #ffe0b2; -webkit-text-fill-color: #ffe0b2; filter: none; margin-top: 10px; }
+  .barwrap { width: min(420px, 80vw); height: 10px; background: rgba(255,255,255,.12); border-radius: 6px; margin-top: 34px; overflow: hidden; }
+  #loadbar { height: 100%; width: 0; background: linear-gradient(90deg, #ff9933, #ffd54f); transition: width .2s; }
+  #loadtxt { margin-top: 12px; opacity: .8; font-size: 15px; }
+  #start { display: none; background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.75)); }
+  .btn { font-family: inherit; font-weight: 800; font-size: 22px; padding: 12px 42px; border: 0; border-radius: 40px; cursor: pointer; color: #2b1300;
+    background: linear-gradient(180deg, #ffd54f, #ff9933); box-shadow: 0 6px 0 #a35200, 0 10px 24px rgba(0,0,0,.4); margin-top: 26px; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #a35200; }
+  .btn.s { font-size: 15px; padding: 8px 18px; margin: 4px; box-shadow: 0 3px 0 #a35200; }
+  .keys { margin-top: 22px; display: grid; grid-template-columns: auto auto; gap: 4px 18px; font-size: 15px; background: rgba(0,0,0,.45); padding: 14px 20px; border-radius: 14px; max-width: 92vw; }
+  .keys b { color: #ffd54f; text-align: right; }
+  .credits { position: absolute; bottom: 10px; font-size: 11px; opacity: .6; text-align: center; padding: 0 10px; }
+  #hud { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 10; text-shadow: 0 2px 3px rgba(0,0,0,.8); }
+  #topright { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; text-align: right; }
+  #clock { font-size: 16px; opacity: .9; }
+  #money { font-size: 30px; font-weight: 800; color: #9ff59f; line-height: 1; -webkit-text-stroke: 1px #0b3d0b; }
+  #stars { font-size: 24px; letter-spacing: 2px; margin-top: 2px; }
+  #stars span { color: rgba(255,255,255,.18); }
+  #stars span.on { color: #fff; } #stars span.dim { color: rgba(255,255,255,.55); }
+  #stars.pulse { animation: pulse .6s 3; }
+  @keyframes pulse { 50% { transform: scale(1.25); } }
+  #mmwrap { position: absolute; left: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: 190px; }
+  #minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid rgba(0,0,0,.6); box-shadow: 0 0 0 2px rgba(255,255,255,.5), 0 6px 18px rgba(0,0,0,.5); display: block; }
+  .bar { height: 8px; background: rgba(0,0,0,.5); border-radius: 4px; margin-top: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
+  .bar div { height: 100%; transition: width .2s; }
+  #area { position: absolute; right: 24px; bottom: 120px; font-size: 34px; font-weight: 800; color: #ffe082; opacity: 0; transition: opacity .6s; font-style: italic; }
+  #area.show { opacity: 1; }
+  #vehpanel { position: absolute; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); text-align: right; display: none; }
+  #speed { font-size: 52px; font-weight: 800; line-height: .9; }
+  #speed::after { content: ' km/h'; font-size: 16px; font-weight: 500; }
+  #vname { font-size: 16px; color: #ffcc80; }
+  #radio { font-size: 13px; opacity: .85; }
+  #vehpanel .bar { width: 140px; margin-left: auto; }
+  #objective { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-size: 18px; background: rgba(0,0,0,.45); padding: 4px 16px; border-radius: 20px; display: none; max-width: 70vw; text-align: center; }
+  #timer { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); font-size: 30px; font-weight: 800; display: none; }
+  #timer.low { color: #ff5252; }
+  #big { position: absolute; top: 28%; left: 0; right: 0; text-align: center; opacity: 0; transition: opacity .4s; }
+  #big.show { opacity: 1; }
+  #big .t { font-size: clamp(40px, 8vw, 84px); font-weight: 800; -webkit-text-stroke: 2px rgba(0,0,0,.7); letter-spacing: 2px; }
+  #big .s { font-size: 20px; }
+  #toasts { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; width: min(360px, 60vw); }
+  .toast { background: rgba(10,10,10,.72); border-left: 4px solid #ff9933; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 15px; transition: opacity .5s, transform .5s; text-shadow: none; }
+  .toast.out { opacity: 0; transform: translateX(-20px); }
+  #cashpops { position: absolute; top: 92px; right: 16px; text-align: right; }
+  .cashpop { color: #9ff59f; font-weight: 800; font-size: 18px; animation: rise 2.2s forwards; }
+  @keyframes rise { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-30px); opacity: 0; } }
+  #prompt { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); padding: 6px 16px; border-radius: 8px; font-size: 17px; opacity: 0; transition: opacity .2s; white-space: nowrap; }
+  #prompt.show { opacity: 1; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 160px 40px rgba(220,0,0,.8); opacity: 0; transition: opacity .25s; z-index: 9; }
+  #fps { position: absolute; right: 8px; top: 50%; font-size: 11px; opacity: .45; }
+  #menu { display: none; background: rgba(10,6,2,.82); z-index: 40; overflow-y: auto; padding: 20px; }
+  #menu h2 { margin: 0 0 6px; font-size: 40px; color: #ffb74d; }
+  .row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; margin-top: 8px; gap: 4px; }
+  #mapwrap { display: none; z-index: 30; background: #1b2a33; pointer-events: auto; }
+  #fullmap { position: absolute; inset: 0; cursor: grab; }
+  #mapclose { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; z-index: 2; }
+  #mapbar { position: absolute; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 48px); display: flex; flex-direction: column; gap: 6px; z-index: 2; }
+  #mapbar .btn { min-width: 46px; font-size: 18px; }
+  #mapchips { position: absolute; left: 10px; top: max(10px, env(safe-area-inset-top)); right: 120px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 2; }
+  #mapchips .chip { font-size: 13px; padding: 6px 10px; background: rgba(0,0,0,.6); }
+  #mapchips .chip.off { opacity: .45; text-decoration: line-through; }
+  #mapcard { display: none; position: absolute; left: 50%; transform: translateX(-50%); bottom: max(16px, env(safe-area-inset-bottom)); width: min(420px, 92vw); background: rgba(15,20,25,.92); border: 1px solid rgba(255,255,255,.15); border-radius: 14px; padding: 12px 14px; color: #fff; z-index: 2; }
+  #mapcard .mct { font: 700 18px "Baloo 2", sans-serif; margin-right: 40px; } #mapcard .mcs { font-size: 13px; opacity: .8; margin: 2px 0 8px; }
+  #mapcard .btn:last-child { position: absolute; top: 8px; right: 8px; }
+  #weapon { font-size: 16px; margin-top: 2px; } #weapon .wi { margin-right: 4px; } #weapon b { color: #ffd54f; margin-left: 4px; }
+  #roombadge { display: none; font-size: 13px; background: rgba(0,0,0,.5); border-radius: 10px; padding: 2px 8px; margin-top: 4px; display: none; }
+  #crosshair { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-55%); font-size: 30px; color: #fff; font-weight: 300; text-shadow: 0 0 3px #000; }
+  #shopui { display: none; z-index: 45; background: rgba(0,0,0,.45); pointer-events: auto; }
+  .shopbox { width: min(560px, 94vw); max-height: 86vh; overflow-y: auto; background: #1d140c; border: 2px solid #ff9933; border-radius: 16px; padding: 14px 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .shophead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  #shoptitle { font-size: 24px; font-weight: 800; color: #ffcc80; } #shopsub { color: #9ff59f; font-weight: 700; }
+  .item { display: flex; justify-content: space-between; align-items: center; padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,.08); gap: 10px; }
+  .item small { display: block; opacity: .7; font-size: 13px; } .item .k { display: inline-block; background: #ff9933; color: #000; border-radius: 4px; padding: 0 5px; margin-right: 6px; font-size: 12px; }
+  .item button { font-family: inherit; font-weight: 800; font-size: 15px; border: 0; border-radius: 20px; padding: 6px 14px; background: #ffd54f; cursor: pointer; min-width: 80px; }
+  .item.off { opacity: .4; } .hint { opacity: .5; display: block; margin-top: 6px; }
+  #phone { position: fixed; right: 18px; bottom: -640px; z-index: 44; transition: bottom .35s cubic-bezier(.2,.9,.3,1.1); pointer-events: auto; }
+  #phone.show { bottom: 16px; }
+  .phoneframe { width: 300px; height: 560px; max-height: calc(100vh - 32px); background: #111; border-radius: 34px; padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.7), inset 0 0 0 3px #333; position: relative; display: flex; flex-direction: column; }
+  .notch { width: 90px; height: 18px; background: #000; border-radius: 0 0 12px 12px; margin: -12px auto 0; }
+  #phonescreen { flex: 1; background: linear-gradient(160deg, #ff9933 0%, #d84315 35%, #311b92 100%); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; font-size: 14px; }
+  #phoneclose { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); background: none; border: 0; color: #888; font-size: 20px; cursor: pointer; }
+  .pstatus { font-size: 11px; padding: 6px 14px 0; opacity: .9; }
+  .phead { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; padding: 4px 14px 8px; }
+  .pbody { flex: 1; overflow-y: auto; padding: 0 10px 18px; }
+  .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-top: 8px; }
+  .pbtn { font-family: inherit; color: #fff; border: 0; cursor: pointer; }
+  .pbtn.app { background: rgba(255,255,255,.14); border-radius: 18px; padding: 10px 0 6px; display: flex; flex-direction: column; align-items: center; }
+  .pbtn.app .ic { font-size: 30px; } .pbtn.app small { font-size: 11px; margin-top: 2px; }
+  .pbtn.back { background: rgba(255,255,255,.2); border-radius: 50%; width: 30px; height: 30px; font-size: 22px; line-height: 1; }
+  .pbtn.row { display: block; width: 100%; text-align: left; background: rgba(0,0,0,.28); border-radius: 12px; padding: 8px 10px; margin: 6px 0; font-size: 14px; }
+  .pbtn.row .ic { font-size: 20px; margin-right: 6px; } .pbtn.row small { display: block; opacity: .75; font-size: 12px; }
+  .pbtn.wide { display: block; width: 100%; background: rgba(0,0,0,.35); border-radius: 12px; padding: 9px; margin: 6px 0; font-weight: 700; }
+  .pbtn.green { background: #2e7d32; border-radius: 10px; padding: 8px 12px; font-weight: 800; } .pbtn.red { background: rgba(183,28,28,.8); }
+  .pnote { background: rgba(0,0,0,.3); border-radius: 12px; padding: 10px; margin: 6px 0; line-height: 1.5; font-size: 13px; }
+  .pnote .code { font-size: 26px; letter-spacing: 4px; color: #ffd54f; }
+  .prow { display: flex; gap: 6px; align-items: center; margin: 8px 0; }
+  .prow input { flex: 1; font-family: inherit; font-size: 15px; padding: 7px 10px; border-radius: 10px; border: 0; min-width: 0; }
+  body.touchmode .phoneframe { width: 270px; height: calc(100vh - 24px); }
+  body.touchmode #phone.show { bottom: 6px; }
+  #fade { position: fixed; inset: 0; background: #000; color: #ffd54f; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; opacity: 0; pointer-events: none; transition: opacity .8s; z-index: 60; }
+  #splash { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .8s; z-index: 9; }
+  #dialog { display: none; position: fixed; left: 50%; bottom: 14%; transform: translateX(-50%); width: min(620px, 92vw); z-index: 46; background: rgba(20,12,6,.92); border: 2px solid #ce93d8; border-radius: 16px; padding: 12px 16px 10px; pointer-events: auto; cursor: pointer; }
+  #dlgname { color: #ce93d8; font-weight: 800; font-size: 18px; } #dlgtext { font-size: 17px; margin: 4px 0 6px; line-height: 1.35; }
+  #dlgnext { float: right; font-family: inherit; font-weight: 800; border: 0; border-radius: 14px; padding: 4px 14px; background: #ce93d8; cursor: pointer; }
+  /* touch controls */
+  #touch { display: none; position: fixed; inset: 0; z-index: 20; }
+  #touchlayer { position: absolute; inset: 0; }
+  #stick { position: absolute; left: 40px; bottom: 60px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.35); opacity: .35; pointer-events: none; }
+  #knob { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.6); }
+  .tb { position: absolute; width: 62px; height: 62px; border-radius: 50%; background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.55); color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; font-family: inherit; font-weight: 800; }
+  .tb.on { background: rgba(255,153,51,.6); }
+  .tb small { font-size: 10px; position: absolute; bottom: 4px; }
+  .foot-only, .veh-only { display: none; }
+  body:not(.inveh) .foot-only { display: flex; } body.inveh .veh-only { display: flex; }
+  body.touchmode #mmwrap { width: 128px; left: 10px; top: max(10px, env(safe-area-inset-top)); bottom: auto; }
+  body.touchmode #minimap { width: 128px; height: 128px; }
+  body.touchmode #toasts { left: 150px; width: min(300px, 45vw); }
+  body.touchmode #area { bottom: auto; top: 110px; font-size: 22px; }
+  body.touchmode #vehpanel { bottom: auto; top: 168px; left: 12px; right: auto; text-align: left; } body.touchmode #vehpanel .bar { margin-left: 0; width: 120px; } body.touchmode #speed { font-size: 30px; } body.touchmode #radio { display: none; }
+  body.inveh #weapon { display: none; }
+  body.touchmode #big .s { font-size: 15px; }
+  body.touchmode .toast { font-size: 12px; padding: 5px 8px; }
+  body.touchmode #prompt { bottom: 40%; font-size: 14px; }
+  body.touchmode #topright { top: 62px; right: 12px; } body.touchmode #money { font-size: 24px; }
+  body.touchmode #cashpops { top: 130px; }
+  #rotate { display: none; margin-top: 14px; background: #ff9933; color: #2b1300; padding: 6px 14px; border-radius: 20px; font-weight: 700; }
+  @media (orientation: portrait) and (pointer: coarse) { #rotate { display: block; } }
+  @media (max-height: 520px) { .logo { font-size: 44px; } .btn { margin-top: 12px; font-size: 18px; padding: 8px 30px; } .keys { font-size: 12px; padding: 8px 14px; margin-top: 10px; gap: 1px 12px; } .credits { font-size: 9px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vignette"></div>
+<div id="splash"></div>
+<div id="fade"></div>
+<div id="dialog"><div id="dlgname"></div><div id="dlgtext"></div><button id="dlgnext">Next ▸</button></div>
+
+<div id="loading" class="screen">
+  <div class="logo">BHARAT CITY<small>OPEN WORLD</small></div>
+  <div class="barwrap"><div id="loadbar"></div></div>
+  <div id="loadtxt">Starting…</div>
+</div>
+
+<div id="start" class="screen">
+  <div class="logo">BHARAT CITY<small>OPEN WORLD</small></div>
+  <button class="btn" id="playbtn">▶ PLAY</button>
+  <div class="keys" id="keyhelp">
+    <b>WASD</b><span>Walk / drive</span><b>Mouse</b><span>Look around (click to capture)</span>
+    <b>Shift</b><span>Sprint</span><b>Space</b><span>Jump / handbrake</span>
+    <b>E</b><span>Enter / exit / hijack vehicle</span><b>F / Click</b><span>Punch</span>
+    <b>H</b><span>Horn (honk a lot!)</span><b>Q</b><span>Change radio station</span>
+    <b>R</b><span>Taxi / Sawari duty (auto or car)</span><b>E (on foot)</b><span>Shops, temple, train, chai…</span>
+    <b>P</b><span>Phone: jobs, GPS, garage, multiplayer</span><b>Right mouse</b><span>Aim (with a gun) • 1/2/3 switch weapon</span>
+    <b>Shift (driving)</b><span>Nitro boost</span><b>M</b><span>City map</span>
+    <b>C</b><span>Camera distance</span><b>Esc</b><span>Pause &amp; settings</span>
+  </div>
+  <div class="keys" id="touchhelp" style="display:none">
+    <b>Left thumb</b><span>Joystick: walk / drive (push far = run)</span><b>Right thumb</b><span>Drag to look around</span>
+    <b>🚗</b><span>Enter / exit / hijack vehicles</span><b>👊 📯</b><span>Punch on foot • Horn in vehicles</span>
+    <b>📱</b><span>Phone: jobs, GPS, garage, multiplayer</span><b>🔥</b><span>Nitro while driving</span>
+  </div>
+  <div id="rotate">📱↻ Turn your phone sideways for the best view</div>
+  <div class="credits">3D people, cows &amp; dogs: Quaternius (CC0) • Cars: Kenney Car Kit (CC0) • City, autos, bikes, buses, trucks, temple, textures &amp; all audio generated procedurally</div>
+</div>
+
+<div id="hud">
+  <div id="toasts"></div>
+  <div id="objective"></div>
+  <div id="timer"></div>
+  <div id="big"></div>
+  <div id="prompt"></div>
+  <div id="topright">
+    <div id="clock">09:00</div>
+    <div id="money">₹500</div>
+    <div id="stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+    <div id="weapon"></div>
+    <div id="roombadge"></div>
+  </div>
+  <div id="crosshair">+</div>
+  <div id="cashpops"></div>
+  <div id="area"></div>
+  <div id="mmwrap">
+    <canvas id="minimap" width="380" height="380"></canvas>
+    <div class="bar"><div id="hp" style="width:100%;background:#66bb6a"></div></div>
+    <div class="bar" id="armorbar" style="display:none"><div id="armor" style="width:0;background:#42a5f5"></div></div>
+  </div>
+  <div id="vehpanel">
+    <div id="speed">0</div>
+    <div id="vname"></div>
+    <div class="bar"><div id="vhp" style="width:100%;background:#ffb74d"></div></div>
+    <div class="bar"><div id="nitro" style="width:100%;background:linear-gradient(90deg,#00e5ff,#2979ff)"></div></div>
+    <div id="radio"></div>
+  </div>
+  <div id="fps"></div>
+</div>
+
+<div id="shopui" class="screen"><div class="shopbox"><div class="shophead"><div><div id="shoptitle"></div><small id="shopsub"></small></div><button class="btn s" id="shopclose">✕</button></div><div id="shoplist"></div><small class="hint">Number keys buy quickly • E / Esc closes</small></div></div>
+<div id="phone"><div class="phoneframe"><div class="notch"></div><div id="phonescreen"></div><button id="phoneclose">⌄</button></div></div>
+<div id="mapwrap" class="screen"><canvas id="fullmap"></canvas><button class="btn s" id="mapclose">✕ Close</button></div>
+
+<div id="menu" class="screen">
+  <h2>PAUSED</h2>
+  <button class="btn" id="resume">▶ Resume</button>
+  <div class="row" style="margin-top:20px">Graphics (now: <b class="qcur" style="margin:0 4px"></b>):
+    <button class="btn s" data-q="low">Low</button><button class="btn s" data-q="medium">Medium</button><button class="btn s" data-q="high">High</button></div>
+  <div class="row"><button class="btn s" id="btn-time">⏩ Skip 3 hours</button><button class="btn s" id="btn-rain">🌧 Toggle monsoon rain</button></div>
+  <div class="row">Volume <input type="range" id="btn-vol" min="0" max="100" value="80"></div>
+  <div class="keys">
+    <b>Missions</b><span>Walk into a glowing mission doorway and press E (see map, M)</span>
+    <b>C</b><span>Chai Express — deliver chai on foot</span><b>R</b><span>Galli Race — needs a vehicle</span>
+    <b>D</b><span>Dabba Delivery — lunch tiffins</span><b>Auto</b><span>Press R in an auto-rickshaw for passenger fares</span>
+    <b>Diyas</b><span>Find 25 glowing diyas hidden around the city</span><b>Police</b><span>Crimes raise ★. Stay out of sight to lose them</span>
+  </div>
+</div>
+
+<div id="touch">
+  <div id="touchlayer"></div>
+  <div id="stick"><div id="knob"></div></div>
+  <button class="tb" data-act="pause" style="right:12px;top:12px;width:44px;height:44px;font-size:18px">⏸</button>
+  <button class="tb" data-act="map" style="right:64px;top:12px;width:44px;height:44px;font-size:18px">🗺</button>
+  <button class="tb" data-act="phone" style="right:116px;top:12px;width:44px;height:44px;font-size:18px">📱</button>
+  <button class="tb" data-act="enter" style="right:120px;bottom:150px">🚗<small>E</small></button>
+  <button class="tb foot-only" data-act="jump" style="right:24px;bottom:150px">⤒<small>JUMP</small></button>
+  <button class="tb foot-only" data-act="punch" id="firebtn" style="right:70px;bottom:60px;width:74px;height:74px">👊</button>
+  <button class="tb foot-only" data-act="sprint" style="right:160px;bottom:60px">🏃<small>RUN</small></button>
+  <button class="tb foot-only" data-act="wnext" style="right:206px;bottom:150px;width:50px;height:50px;font-size:20px">🔄</button>
+  <button class="tb veh-only" data-act="handbrake" style="right:24px;bottom:150px">⛔<small>BRAKE</small></button>
+  <button class="tb veh-only" data-act="horn" style="right:70px;bottom:60px;width:74px;height:74px">📯</button>
+  <button class="tb veh-only" data-act="nitro" style="right:160px;bottom:60px">🔥<small>NITRO</small></button>
+  <button class="tb veh-only" data-act="radio" style="right:206px;bottom:150px;width:50px;height:50px;font-size:20px">📻</button>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
